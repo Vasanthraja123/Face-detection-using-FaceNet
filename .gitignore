@@ -16,6 +16,7 @@ Output images/
 # Jupyter Notebook checkpoints
 *.ipynb_checkpoints
 
-Sample 1/
+# Model files
+facenet_model.pth
 
-facenet_model.Pth
+Sample 1/
