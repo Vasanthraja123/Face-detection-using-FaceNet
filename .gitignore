@@ -17,3 +17,5 @@ Output images/
 *.ipynb_checkpoints
 
 Sample 1/
+
+facenet_model.Pth
