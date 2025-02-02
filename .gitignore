@@ -1,0 +1,19 @@
+# Python cache files
+__pycache__/
+*.pyc
+
+# Virtual environment
+myenv/
+
+# Dataset files
+Dataset.zip
+processed_dataset/
+Output images/
+
+# Log files
+*.log
+
+# Jupyter Notebook checkpoints
+*.ipynb_checkpoints
+
+Sample 1/
