@@ -11,15 +11,21 @@
             padding: 0;
             box-sizing: border-box;
         }
-
-        /* Body and Layout */
-        html, body {
+        html{
             height: 100%;
             font-family: 'Roboto', sans-serif;
             background: linear-gradient(#141e30, #243b55);
-            background-image: url('https://i.pinimg.com/736x/ac/b8/bd/acb8bd2146ce943c223b369a26815a7e.jpg');
+            background-image: url('https://static.vecteezy.com/system/resources/previews/008/680/961/non_2x/abstract-technology-background-free-vector.jpg');
             background-size: cover;
             background-repeat: no-repeat;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* Body and Layout */
+        body{
+            height: 100%;
+            font-family: 'Roboto', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -28,7 +34,7 @@
         h1 {
             font-size: 2.2rem;
             margin-bottom: 20px;
-            color: rgb(11, 228, 236);
+            color: rgb(255, 255, 255);
             font-weight: 500;
             letter-spacing: 1px;
             text-align: center;
@@ -218,7 +224,7 @@
     <div class="content">
         <h1>Face Recognition Attendance System</h1>
         <div class="video-container">
-            <img id="placeholder-image" src="https://i.pinimg.com/736x/ac/b8/bd/acb8bd2146ce943c223b369a26815a7e.jpg" alt="Placeholder">
+            <img id="placeholder-image" src="https://img.freepik.com/free-vector/abstract-flat-face-recognition-background_23-2148189720.jpg" alt="Placeholder">
             <video id="camera" autoplay></video>
         </div>
         <div class="button-container">
@@ -427,48 +433,6 @@ exitButton.addEventListener('click', () => {
 updateButton.addEventListener('click', () => {
     folderInput.click();
 });
-
-// File upload handling
-folderInput.addEventListener('change', (e) => {
-    const files = e.target.files;
-    if (files.length > 0) {
-        uploadProgress.style.display = 'block';
-        let uploaded = 0;
-        const total = files.length;
-
-        Array.from(files).forEach(file => {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            fetch('/upload_image', {
-                method: 'POST',
-                body: formData,
-            })
-            .then(response => response.json())
-            .then(data => {
-                uploaded++;
-                const progress = (uploaded / total) * 100;
-                progressBar.style.width = `${progress}%`;
-                
-                if (uploaded === total) {
-                    messageDiv.textContent = 'Files uploaded successfully!';
-                    messageDiv.classList.add('success');
-                    setTimeout(() => {
-                        uploadProgress.style.display = 'none';
-                        progressBar.style.width = '0%';
-                    }, 2000);
-                }
-            })
-            .catch(error => {
-                console.error('Upload error:', error);
-                messageDiv.textContent = 'Error uploading files. Please try again.';
-                messageDiv.classList.add('error');
-            });
-        });
-    }
-});
-    </script>
-
     </script>
 </body>
 </html>
