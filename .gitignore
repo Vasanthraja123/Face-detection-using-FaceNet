@@ -17,7 +17,20 @@ Output images/
 *.ipynb_checkpoints
 
 # Model files
-facenet_model.pth
+*.pth
+*.pkl
+
+# Training data
+*.npy
+
+# Sensitive files
+admin-data.json
+
+# Excel files
+*.xlsx
+
+# Jupyter notebooks
+*.ipynb
 
 Dataset/
 crop.py

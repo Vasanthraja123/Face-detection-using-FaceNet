@@ -218,6 +218,32 @@
         }
 
         .hidden { display: none; }
+
+        .hidden { display: none; }
+.hidden-trigger-area {
+    width: 100%;
+    height: 50px;
+    margin-top: 20px;
+}
+#password-popup {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+#google-sheet-link {
+    text-align: center;
+    margin-top: 10px;
+}
+#google-sheet-link a {
+    color: #03e9f4;
+    text-decoration: none;
+    font-weight: bold;
+}
     </style>
 </head>
 <body>
@@ -252,10 +278,21 @@
         <div class="image-display" id="imageContainer">
             <img id="captured-image" src="" alt="Captured Image">
         </div>
+
+        <!-- Add this inside the existing .content div, below the button-container -->
+<div id="hidden-trigger-area" class="hidden-trigger-area"></div>
+<div id="password-popup" class="hidden">
+    <input type="password" id="password-input" placeholder="Enter Password">
+    <button id="submit-password">Submit</button>
+</div>
+<div id="google-sheet-link" class="hidden">
+    <a href="https://docs.google.com/spreadsheets/d/1n-ZQq1UPlklsvERQl15ijsTueprSaIqNG29NOChnr3o/edit?usp=sharing" target="_blank">Access Secure Sheet</a>
+</div>
     </div>
 
     <script>
        // DOM Elements
+// DOM Elements
 const videoElement = document.getElementById('camera');
 const placeholderImage = document.getElementById('placeholder-image');
 const messageDiv = document.getElementById('message');
@@ -267,6 +304,34 @@ const uploadProgress = document.getElementById('upload-progress');
 const progressBar = uploadProgress.querySelector('.progress-bar');
 const capturedImage = document.getElementById('captured-image');
 const image = document.getElementById('imageContainer');
+let clickCount = 0;
+const triggerArea = document.getElementById("hidden-trigger-area");
+const passwordPopup = document.getElementById("password-popup");
+const passwordInput = document.getElementById("password-input");
+const submitPassword = document.getElementById("submit-password");
+const googleSheetLink = document.getElementById("google-sheet-link");
+const correctPassword = "1234"; // Change this to your actual password
+
+// Click detection
+triggerArea.addEventListener("click", () => {
+    clickCount++;
+    if (clickCount === 3) {
+        passwordPopup.classList.remove("hidden");
+        clickCount = 0; // Reset click count
+    }
+});
+
+// Password verification
+submitPassword.addEventListener("click", () => {
+    if (passwordInput.value === correctPassword) {
+        googleSheetLink.classList.remove("hidden");
+        passwordPopup.classList.add("hidden");
+        passwordInput.value = "";
+        setTimeout(() => googleSheetLink.classList.add("hidden"), 5000); // Hide after 5 sec
+    } else {
+        alert("Incorrect password! Try again.");
+    }
+});
 
 // Initialize state
 let stream = null;
@@ -430,9 +495,12 @@ exitButton.addEventListener('click', () => {
     recognizeFace('exit');
 });
 
+// Update Button Now Redirects to Update Page
 updateButton.addEventListener('click', () => {
-    folderInput.click();
+    window.location.href = "/update"; // Redirects to the update page
 });
+
+
     </script>
 </body>
 </html>
