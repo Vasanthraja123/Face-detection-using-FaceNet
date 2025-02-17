@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import threading
 import time
 import pandas as pd
 from flask import Flask, request, jsonify, render_template
@@ -16,9 +17,11 @@ from markupsafe import Markup, escape
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+#from threading import Lock
 from torchvision import transforms
-
-
+from torch.utils.data import DataLoader, Dataset
+import torch.optim as optim
+from train_model import train_recognition_model
 app = Flask(__name__)
 
 # Constants
@@ -75,7 +78,168 @@ def save_class_name(new_name):
         class_names = sorted(class_names, key=str.lower) 
         with open(CLASS_NAMES_FILE, 'w') as f:
             json.dump(class_names, f, indent=4)
+    
+            # Lock to handle concurrent model loading/training
+model_lock = threading.Lock()
+training_complete = threading.Event()
 
+# Load class names and model initialization
+def load_classifier_model(device):
+    """
+    Loads the classifier model while handling potential class count mismatches
+    """
+    try:
+        # Load class names first
+        with open('class_names.json', 'r') as f:
+            class_names = json.load(f)
+        
+        # Load the saved model state
+        saved_state = torch.load('classifier_model.pth')
+        
+        # Get the number of classes from the saved model
+        num_classes_saved = saved_state['fc.bias'].size(0)
+        num_classes_current = len(class_names)
+        
+        # Initialize the model with the correct number of classes
+        classifier_model = FaceClassifier(embedding_dim=512, num_classes=num_classes_current).to(device)
+        
+        if num_classes_saved == num_classes_current:
+            # If dimensions match, load normally
+            classifier_model.load_state_dict(saved_state)
+        else:
+            # If dimensions don't match, transfer weights for existing classes
+            # and initialize new classes randomly
+            new_state = classifier_model.state_dict()
+            
+            # Copy weights for existing classes
+            new_state['fc.weight'][:num_classes_saved] = saved_state['fc.weight']
+            new_state['fc.bias'][:num_classes_saved] = saved_state['fc.bias']
+            
+            classifier_model.load_state_dict(new_state)
+            print(f"Model adapted from {num_classes_saved} to {num_classes_current} classes")
+        
+        classifier_model.eval()
+        return classifier_model, class_names
+    
+    except Exception as e:
+        print(f"Error loading classifier model: {str(e)}")
+        raise
+
+# Replace the model loading code in your main script with:
+try:
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    classifier_model, class_names = load_classifier_model(device)
+    
+    # Load reference embeddings
+    reference_embeddings = {}
+    reference_dir = 'reference_embeddings'
+    if os.path.exists(reference_dir):
+        for person in os.listdir(reference_dir):
+            person_embeddings = []
+            person_path = os.path.join(reference_dir, person)
+            for embedding_file in os.listdir(person_path):
+                if embedding_file.endswith('.npy'):
+                    embedding = np.load(os.path.join(person_path, embedding_file))
+                    person_embeddings.append(embedding)
+            if person_embeddings:
+                reference_embeddings[person] = np.stack(person_embeddings)
+
+except Exception as e:
+    print(f"Error loading models and references: {str(e)}")
+    raise
+
+
+@app.route('/register_face', methods=['POST'])
+def register_face():
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        image_data = data.get('image')
+        
+        if not username or not image_data:
+            return jsonify({"error": "Username and image are required"}), 400
+
+        # Create directories if they don't exist
+        train_dir = os.path.join('Dataset', 'train', username)
+        test_dir = os.path.join('Dataset', 'test', username)
+        os.makedirs(train_dir, exist_ok=True)
+        os.makedirs(test_dir, exist_ok=True)
+
+        # Convert image data
+        img_data = image_data.split(",")[1]
+        img_bytes = BytesIO(base64.b64decode(img_data))
+        img = Image.open(img_bytes)
+        img = np.array(img, dtype=np.uint8)
+
+        # Face detection
+        boxes, probs = mtcnn.detect(img)
+        
+        if boxes is None or len(boxes) == 0:
+            return jsonify({"error": "No face detected"}), 400
+
+        # Process the first detected face
+        x1, y1, x2, y2 = map(int, boxes[0])
+        face_img = img[y1:y2, x1:x2]
+        timestamp = int(time.time() * 1000)
+        
+        # Count existing images
+        total_train = len([f for f in os.listdir(train_dir) if f.endswith('.jpg')])
+        total_test = len([f for f in os.listdir(test_dir) if f.endswith('.jpg')])
+        total_images = total_train + total_test
+
+        if total_images < 300:
+            # Save image to appropriate directory
+            if total_train < 240:  # 80% for training
+                save_path = os.path.join(train_dir, f"face_{timestamp}.jpg")
+            else:
+                save_path = os.path.join(test_dir, f"face_{timestamp}.jpg")
+                
+            Image.fromarray(face_img).save(save_path, 'JPEG', quality=85, optimize=True)
+            total_images += 1
+            
+            # If we've collected all required images, start the retraining process
+            if total_images >= 300:
+                # Start retraining in a background thread
+                def update_and_retrain():
+                    try:
+                        # Update class names
+                        global classifier_model, class_names
+                        class_names = load_class_names()
+                        if username not in class_names:
+                            class_names.append(username)
+                            with open(CLASS_NAMES_FILE, 'w') as f:
+                                json.dump(class_names, f)
+                        
+                        success, message = train_recognition_model()
+                        if success:
+                            # Reload the models after training
+                            with model_lock:
+                                classifier_model, class_names = load_classifier_model(device)
+                                print("Model retrained and reloaded successfully")
+                        else:
+                            print(f"Training failed: {message}")
+                    
+                    except Exception as e:
+                        print(f"Error in retraining: {str(e)}")
+
+                threading.Thread(target=update_and_retrain).start()
+
+                return jsonify({
+                    "message": "Registration complete, model retraining started",
+                    "progress": 300,
+                    "complete": True
+                })
+            
+            return jsonify({
+                "message": f"Image captured successfully. {300 - total_images} more images needed.",
+                "progress": total_images,
+                "complete": False
+            })
+            
+    except Exception as e:
+        print(f"Error in register_face: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
 # Capture and save images
 @app.route('/start_capture', methods=['POST'])
 def start_capture():
@@ -131,7 +295,6 @@ def start_capture():
 
 @app.route('/update_dataset', methods=['POST'])
 def update_dataset():
-    """Receive captured images, store them in train/test folders, and update class names."""
     try:
         data = request.get_json()
         user_name = data.get("name")
@@ -164,8 +327,25 @@ def update_dataset():
         # Update class names
         save_class_name(user_name)
 
+        # Start model training in a background thread
+        def train_model_background():
+            try:
+                success, message = train_recognition_model()
+                if success:
+                    # Reload the models after training
+                    global classifier_model, class_names
+                    with model_lock:
+                        classifier_model, class_names = load_classifier_model(device)
+                        print("Model retrained and reloaded successfully")
+                else:
+                    print(f"Training failed: {message}")
+            except Exception as e:
+                print(f"Error in retraining: {str(e)}")
+
+        threading.Thread(target=train_model_background).start()
+
         return jsonify({
-            "message": "Images processed successfully",
+            "message": "Images processed successfully and model training started",
             "processed_faces": total_images,
             "train_count": train_count,
             "test_count": test_count,
