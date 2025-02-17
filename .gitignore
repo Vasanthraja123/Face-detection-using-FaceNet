@@ -15,11 +15,6 @@ Output images/
 
 # Jupyter Notebook checkpoints
 *.ipynb_checkpoints
-
-# Model files
-*.pth
-*.pkl
-
 # Training data
 *.npy
 
