@@ -17,11 +17,9 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from torchvision import transforms
-from flask_ngrok import run_with_ngrok
+
 
 app = Flask(__name__)
-if os.environ.get("USE_NGROK") == "1":
-    run_with_ngrok(app) 
 
 # Constants
 FACE_SIMILARITY_THRESHOLD = 0.9
@@ -482,6 +480,4 @@ def recognize_face():
         })
 
 if __name__ == '__main__':
-     debug_mode = os.environ.get("FLASK_DEBUG", "0") == "1"
-     app.config['DEBUG'] = debug_mode  # Set debug mode explicitly
-     app.run()
+     app.run(debug=True)
