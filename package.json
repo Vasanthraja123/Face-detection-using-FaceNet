@@ -1,5 +1,13 @@
 {
+  "name": "my-python-app",
+  "version": "1.0.0",
+  "description": "A Python app with HTML and JavaScript frontend deployed on Railway",
+  "main": "server.py",
   "scripts": {
-    "start": "node index.js"
+    "start": "python server.py"
+  },
+  "dependencies": {},
+  "engines": {
+    "python": "3.x"
   }
 }
