@@ -1,0 +1,21 @@
+{
+    "name": "Face Recognition System",
+    "short_name": "FRAS",
+    "start_url": "https://c2e6-2401-4900-4de7-4f2d-f91f-e3f2-d13-54d9.ngrok-free.app ",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#000000",
+    "icons": [
+      {
+        "src": "/static/icons/FaceApp.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "/static/icons/FaceApp.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  }
+  
