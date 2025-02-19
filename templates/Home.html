@@ -248,6 +248,71 @@
     text-decoration: none;
     font-weight: bold;
 }
+/* Global Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+html {
+    height: 100%;
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(#141e30, #243b55);
+    background-image: url('https://static.vecteezy.com/system/resources/previews/008/680/961/non_2x/abstract-technology-background-free-vector.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Responsive Design for Mobile View */
+@media (max-width: 480px) {
+    html {
+        background-image: url('https://static.vecteezy.com/system/resources/previews/008/680/961/non_2x/abstract-technology-background-free-vector.jpg'); /* Keep the background image */
+        background-size: cover; /* Ensure the background covers the full screen */
+        background-position: center; /* Center the image for better fit on smaller screens */
+        background-attachment: fixed; /* Make the background fixed for smooth scrolling */
+    }
+
+    h1 {
+        font-size: 1.6rem; /* Adjust font size */
+        margin-bottom: 10px; /* Reduced margin */
+    }
+
+    .content {
+        padding: 20px; /* Adjust padding for smaller screens */
+        width: 90%; /* Allow content to take up most of the screen width */
+        max-width: none; /* Remove max-width */
+    }
+
+    .video-container {
+        width: 100%; /* Ensure video container is full-width */
+        height: 200px; /* Reduce height for better fit on small screens */
+        margin-bottom: 15px; /* Reduced bottom margin */
+    }
+
+    .button-container a {
+        font-size: 14px; /* Smaller font size for buttons */
+        padding: 10px 18px; /* Smaller button padding */
+        margin: 8px 12px; /* Reduced margin between buttons */
+    }
+
+    .image-display img {
+        width: 80%; /* Scale down image size */
+    }
+
+    #password-popup {
+        width: 80%; /* Make password popup more responsive */
+        padding: 15px; /* Adjust padding */
+    }
+
+    #google-sheet-link {
+        font-size: 14px; /* Smaller font for the link */
+        margin-top: 10px; /* Reduced margin for better layout */
+    }
+}
+
     </style>
 </head>
 <body>
@@ -308,35 +373,59 @@ const uploadProgress = document.getElementById('upload-progress');
 const progressBar = uploadProgress.querySelector('.progress-bar');
 const capturedImage = document.getElementById('captured-image');
 const image = document.getElementById('imageContainer');
-let clickCount = 0;
+// Update these variable declarations at the top of your script
 const triggerArea = document.getElementById("hidden-trigger-area");
 const passwordPopup = document.getElementById("password-popup");
 const passwordInput = document.getElementById("password-input");
 const submitPassword = document.getElementById("submit-password");
 const googleSheetLink = document.getElementById("google-sheet-link");
-const correctPassword = "1234"; // Change this to your actual password
+const correctPassword = "1234";
 
-// Click detection
+let clickCount = 0;
+let clickTimer = null;
+
+// Replace the existing trigger area click handler with this improved version
 triggerArea.addEventListener("click", () => {
     clickCount++;
+    
+    // Reset clickCount after 2 seconds of no clicks
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(() => {
+        clickCount = 0;
+    }, 2000);
+
     if (clickCount === 3) {
         passwordPopup.classList.remove("hidden");
-        clickCount = 0; // Reset click count
+        passwordPopup.style.display = "block";
+        clickCount = 0;
     }
 });
 
-// Password verification
+// Improved password submission handler
 submitPassword.addEventListener("click", () => {
     if (passwordInput.value === correctPassword) {
+        passwordPopup.style.display = "none";
         googleSheetLink.classList.remove("hidden");
-        passwordPopup.classList.add("hidden");
+        googleSheetLink.style.display = "block";
         passwordInput.value = "";
-        setTimeout(() => googleSheetLink.classList.add("hidden"), 5000); // Hide after 5 sec
+        
+        // Hide the link after 5 seconds
+        setTimeout(() => {
+            googleSheetLink.classList.add("hidden");
+            googleSheetLink.style.display = "none";
+        }, 5000);
     } else {
         alert("Incorrect password! Try again.");
+        passwordInput.value = "";
     }
 });
 
+// Add keyboard support for password input
+passwordInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+        submitPassword.click();
+    }
+});
 // Initialize state
 let stream = null;
 let entryLogs = [];
