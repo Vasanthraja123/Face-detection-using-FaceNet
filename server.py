@@ -4,7 +4,7 @@ import os
 import threading
 import time
 import pandas as pd
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, redirect, request, jsonify, render_template, send_from_directory, url_for
 import cv2
 import torch
 import numpy as np
@@ -28,13 +28,29 @@ if os.environ.get("USE_NGROK") == "1":
     run_with_ngrok(app) 
 
 
+# Enable CORS if needed
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
+
+# Service Worker route
 @app.route("/sw.js")
 def service_worker():
-    return send_from_directory("static", "sw.js", mimetype="application/javascript")
+    response = send_from_directory("static", "sw.js", mimetype="application/javascript")
+    # Add cache control headers
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
 
+# Manifest route
 @app.route("/manifest.json")
 def manifest():
-    return send_from_directory("static", "manifest.json", mimetype="application/json")
+    response = send_from_directory("static", "manifest.json", mimetype="application/manifest+json")
+    # Add cache control headers
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
 
 # Serve the favicon
 @app.route("/favicon.ico")
@@ -555,6 +571,14 @@ def log_attendance(spreadsheet_id, name, action):
 def home():
     return send_from_directory('templates', 'Home.html')
 
+# Handle invalid URLs
+@app.errorhandler(404)
+def page_not_found(e):
+    # If the URL contains the ngrok domain, redirect to home
+    if 'ngrok-free.app' in request.url:
+        return redirect(url_for('home'))
+    return "Page not found", 404
+
 @app.route('/update')
 def update_page():
     return render_template('update.html')  # Ensure this file exists in the templates folder
@@ -678,6 +702,11 @@ def recognize_face():
         })
 
 if __name__ == '__main__':
-     debug_mode = os.environ.get("FLASK_DEBUG", "0") == "1"
-     app.config['DEBUG'] = debug_mode  # Set debug mode explicitly
-     app.run()
+    debug_mode = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.config['DEBUG'] = debug_mode
+    
+    # Run the app
+    if os.environ.get("USE_NGROK") == "1":
+        app.run()  # ngrok will handle the port
+    else:
+        app.run(host='0.0.0.0', port=5000)
